@@ -273,7 +273,7 @@ namespace FlatBuffersParser
                 UnderlyingType = BaseType.Int
             };
 
-            // Parse underlying type
+            SkipWhitespaceAndComments();
             if (Peek() == ':')
             {
                 Next();
@@ -295,11 +295,15 @@ namespace FlatBuffersParser
                     Value = currentValue
                 };
 
+                SkipWhitespaceAndComments();
+
                 if (isUnion && Peek() == ':')
                 {
                     Next();
                     enumVal.UnionType = ParseType();
                 }
+
+                SkipWhitespaceAndComments();
 
                 if (Peek() == '=')
                 {
@@ -312,6 +316,8 @@ namespace FlatBuffersParser
                 enumDef.Values.Add(enumVal);
 
                 if (Peek() == ',') Next();
+
+                SkipWhitespaceAndComments();
             }
 
             Expect('}');
