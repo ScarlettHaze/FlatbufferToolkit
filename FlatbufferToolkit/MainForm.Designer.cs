@@ -2,7 +2,7 @@
 using ScintillaNET;
 using System.ComponentModel.Design;
 
-namespace FlatbufferHelper
+namespace FlatbufferToolkit
 {
     partial class MainForm
     {
@@ -43,13 +43,13 @@ namespace FlatbufferHelper
             dataInspectorToolStripMenuItem = new ToolStripMenuItem();
             iDEToolStripMenuItem = new ToolStripMenuItem();
             showLineNumbersToolStripMenuItem = new ToolStripMenuItem();
+            runToolStripMenuItem = new ToolStripMenuItem();
             hexView = new HexBox();
             schemaText = new Scintilla();
             treeView = new TreeView();
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
-            button1 = new Button();
-            outTxt = new TextBox();
+            outTxt = new RichTextBox();
             hexLbl = new Label();
             dataInspector = new GroupBox();
             dataInspectorGrid = new DataGridView();
@@ -59,6 +59,8 @@ namespace FlatbufferHelper
             dataInspectorPanel = new Panel();
             dataInspectorSettings = new GroupBox();
             textLbl = new Label();
+            progressBar1 = new ProgressBar();
+            progressLbl = new Label();
             menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -76,7 +78,7 @@ namespace FlatbufferHelper
             // 
             // menuStrip1
             // 
-            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, runToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new Size(1258, 24);
@@ -136,6 +138,13 @@ namespace FlatbufferHelper
             showLineNumbersToolStripMenuItem.Text = "Show Line Numbers";
             showLineNumbersToolStripMenuItem.Click += showLineNumbersToolStripMenuItem_Click;
             // 
+            // runToolStripMenuItem
+            // 
+            runToolStripMenuItem.Name = "runToolStripMenuItem";
+            runToolStripMenuItem.Size = new Size(40, 20);
+            runToolStripMenuItem.Text = "Run";
+            runToolStripMenuItem.Click += runToolStripMenuItem_Click;
+            // 
             // hexView
             // 
             hexView.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -147,7 +156,7 @@ namespace FlatbufferHelper
             hexView.Name = "hexView";
             hexView.ReadOnly = true;
             hexView.ShadowSelectionColor = Color.FromArgb(100, 60, 188, 255);
-            hexView.Size = new Size(650, 283);
+            hexView.Size = new Size(650, 274);
             hexView.StringViewVisible = true;
             hexView.TabIndex = 0;
             hexView.VScrollBarVisible = true;
@@ -161,7 +170,7 @@ namespace FlatbufferHelper
             schemaText.LexerName = null;
             schemaText.Location = new Point(0, 0);
             schemaText.Name = "schemaText";
-            schemaText.Size = new Size(316, 516);
+            schemaText.Size = new Size(316, 500);
             schemaText.TabIndex = 1;
             schemaText.UpdateUI += schemaText_UpdateUI;
             // 
@@ -172,7 +181,7 @@ namespace FlatbufferHelper
             treeView.Location = new Point(0, 0);
             treeView.Name = "treeView";
             treeView.ShowNodeToolTips = true;
-            treeView.Size = new Size(650, 229);
+            treeView.Size = new Size(650, 222);
             treeView.TabIndex = 2;
             // 
             // splitContainer1
@@ -190,7 +199,7 @@ namespace FlatbufferHelper
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(schemaText);
-            splitContainer1.Size = new Size(970, 516);
+            splitContainer1.Size = new Size(970, 500);
             splitContainer1.SplitterDistance = 650;
             splitContainer1.TabIndex = 3;
             // 
@@ -208,37 +217,27 @@ namespace FlatbufferHelper
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(treeView);
-            splitContainer2.Size = new Size(650, 516);
-            splitContainer2.SplitterDistance = 283;
+            splitContainer2.Size = new Size(650, 500);
+            splitContainer2.SplitterDistance = 274;
             splitContainer2.TabIndex = 0;
-            // 
-            // button1
-            // 
-            button1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            button1.Location = new Point(1124, 555);
-            button1.Name = "button1";
-            button1.Size = new Size(122, 95);
-            button1.TabIndex = 4;
-            button1.Text = "Parse";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
             // 
             // outTxt
             // 
             outTxt.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            outTxt.Location = new Point(12, 555);
-            outTxt.Multiline = true;
+            outTxt.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            outTxt.Location = new Point(12, 539);
             outTxt.Name = "outTxt";
             outTxt.ReadOnly = true;
-            outTxt.ScrollBars = ScrollBars.Vertical;
-            outTxt.Size = new Size(1106, 95);
+            outTxt.ScrollBars = RichTextBoxScrollBars.Vertical;
+            outTxt.Size = new Size(1234, 111);
             outTxt.TabIndex = 5;
+            outTxt.Text = "";
             // 
             // hexLbl
             // 
             hexLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             hexLbl.AutoSize = true;
-            hexLbl.Location = new Point(12, 653);
+            hexLbl.Location = new Point(12, 659);
             hexLbl.Name = "hexLbl";
             hexLbl.Size = new Size(31, 15);
             hexLbl.TabIndex = 6;
@@ -327,7 +326,7 @@ namespace FlatbufferHelper
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel1.Size = new Size(1234, 522);
+            tableLayoutPanel1.Size = new Size(1234, 506);
             tableLayoutPanel1.TabIndex = 8;
             // 
             // dataInspectorPanel
@@ -337,7 +336,7 @@ namespace FlatbufferHelper
             dataInspectorPanel.Dock = DockStyle.Fill;
             dataInspectorPanel.Location = new Point(979, 3);
             dataInspectorPanel.Name = "dataInspectorPanel";
-            dataInspectorPanel.Size = new Size(252, 516);
+            dataInspectorPanel.Size = new Size(252, 500);
             dataInspectorPanel.TabIndex = 4;
             // 
             // dataInspectorSettings
@@ -345,7 +344,7 @@ namespace FlatbufferHelper
             dataInspectorSettings.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dataInspectorSettings.Location = new Point(0, 280);
             dataInspectorSettings.Name = "dataInspectorSettings";
-            dataInspectorSettings.Size = new Size(252, 236);
+            dataInspectorSettings.Size = new Size(252, 220);
             dataInspectorSettings.TabIndex = 8;
             dataInspectorSettings.TabStop = false;
             dataInspectorSettings.Text = "Settings";
@@ -354,22 +353,42 @@ namespace FlatbufferHelper
             // 
             textLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             textLbl.AutoSize = true;
-            textLbl.Location = new Point(235, 653);
+            textLbl.Location = new Point(235, 659);
             textLbl.Name = "textLbl";
             textLbl.Size = new Size(31, 15);
             textLbl.TabIndex = 9;
             textLbl.Text = "Text:";
             // 
+            // progressBar1
+            // 
+            progressBar1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            progressBar1.Location = new Point(1124, 659);
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(122, 15);
+            progressBar1.TabIndex = 10;
+            // 
+            // progressLbl
+            // 
+            progressLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            progressLbl.Location = new Point(917, 659);
+            progressLbl.Name = "progressLbl";
+            progressLbl.RightToLeft = RightToLeft.No;
+            progressLbl.Size = new Size(201, 15);
+            progressLbl.TabIndex = 11;
+            progressLbl.Text = "Ready";
+            progressLbl.TextAlign = ContentAlignment.TopRight;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1258, 677);
+            ClientSize = new Size(1258, 683);
+            Controls.Add(progressLbl);
+            Controls.Add(progressBar1);
             Controls.Add(textLbl);
             Controls.Add(tableLayoutPanel1);
             Controls.Add(hexLbl);
             Controls.Add(outTxt);
-            Controls.Add(button1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
@@ -404,7 +423,7 @@ namespace FlatbufferHelper
         private SplitContainer splitContainer1;
         private SplitContainer splitContainer2;
         private Button button1;
-        private TextBox outTxt;
+        private RichTextBox outTxt;
         private ToolStripMenuItem saveSchemaAsToolStripMenuItem;
         private Label hexLbl;
         private ToolStripMenuItem viewToolStripMenuItem;
@@ -419,5 +438,8 @@ namespace FlatbufferHelper
         private ToolStripMenuItem iDEToolStripMenuItem;
         private ToolStripMenuItem showLineNumbersToolStripMenuItem;
         private Label textLbl;
+        private ProgressBar progressBar1;
+        private Label progressLbl;
+        private ToolStripMenuItem runToolStripMenuItem;
     }
 }

@@ -1,33 +1,31 @@
 ﻿using Be.Windows.Forms;
-using FlatBuffersParser;
+using FlatbufferToolkit.UI;
+using FlatbufferToolkit.UI.Nodes;
+using FlatbufferToolkit.Utils;
+using ScintillaNET;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace FlatbufferHelper
+namespace FlatbufferToolkit
 {
     public class FlatBufferBinWalk
     {
         private readonly BinaryReader _reader;
         private readonly Schema _schema;
         private readonly TreeView _treeView;
+        private readonly int _bufferSize;
 
         public FlatBufferBinWalk(ref HexBox viewer, ref TreeView treeView, byte[] buffer, Schema schema)
         {
             _reader = new BinaryReaderTracked(new MemoryStream(buffer), viewer);
             _schema = schema;
             _treeView = treeView;
+            _bufferSize = buffer.Length;
         }
 
         public Dictionary<string, object>? ReadRoot()
         {
+            Progress.Instance.Setup(_bufferSize, "Parsing binary");
             if (_schema.RootType == null)
                 throw new Exception("No root_type specified in schema");
             Dictionary<string, object> root = null;
@@ -38,12 +36,15 @@ namespace FlatbufferHelper
 
                 var rootNode = new TreeNode(_schema.RootType);
                 root = ReadTable(rootStruct, rootOffset, ref rootNode);
-                _treeView.Nodes.Add(rootNode);
+
+                _treeView.AddNodesToTree(rootNode);
+
             }
             catch (Exception ex)
             {
-                Logger.Instance.Log(ex.Message);
+                Logger.Instance.Log(LogLevel.ERROR, ex.Message);
             }
+            Progress.Instance.SetProgress(_bufferSize, "Done");
 
             return root;
         }
@@ -57,7 +58,7 @@ namespace FlatbufferHelper
             var vtableSize = ReadUShortAt(vtableOffset);
             var tblSize = ReadUShortAt(vtableOffset+2);
 
-            thisNode.ToolTipText = string.Format("Addr: 0x{0} | Elements: {1}", (offset).ToString("X4"), (vtableSize - 4) / 2);
+            thisNode.ToolTipText = $"Addr: 0x{offset.ToString("X4")} | Elements: {((vtableSize - 4) / 2)}";
             foreach (var field in structDef.Fields)
             {
                 if (field.Deprecated) continue;
@@ -75,7 +76,7 @@ namespace FlatbufferHelper
                 }
 
                 TreeNode elem = new TreeNode();
-                elem.ToolTipText = string.Format("Addr: 0x{0}", (offset + fieldOffset).ToString("X4"));
+                elem.ToolTipText = $"Addr: 0x{offset.ToString("X4")}";
 
                 result[field.Name] = ReadFieldAt(field, offset + fieldOffset, ref elem);
 
@@ -96,7 +97,7 @@ namespace FlatbufferHelper
                 if (field.Deprecated) continue;
 
                 TreeNode elem = new TreeNode();
-                elem.ToolTipText = string.Format("Addr: 0x{0}", (pos).ToString("X4"));
+                elem.ToolTipText = $"Addr: 0x{pos.ToString("X4")}";
                 
                 result[field.Name] = ReadFieldAt(field, pos, ref elem);
 
@@ -144,7 +145,7 @@ namespace FlatbufferHelper
                     break;
                 case BaseType.Vector:
                     var typeName = field.Type.ElementType == BaseType.Obj ? field.Type.StructName : field.Type.ElementType.ToString();
-                    node.Text = string.Format("{0}:Vector<{1}>",field.Name, typeName);
+                    node.Text = $"{field.Name}:Vector<{typeName}>";
                     val = ReadVectorAt(field, pos, ref node);
                     break;
                 case BaseType.Obj:
@@ -180,7 +181,7 @@ namespace FlatbufferHelper
                 var elemPos = dataOffset + i * elemSize;
 
                 var child = new TreeNode(field.Type.StructName);
-                child.ToolTipText = string.Format("Addr: 0x{0}", elemPos.ToString("X4"));
+                child.ToolTipText = $"Addr: 0x{elemPos.ToString("X4")}";
                 if (field.Type.ElementType == BaseType.Obj)
                 {
                     var tableOffset = elemPos + ReadIntAt(elemPos);
@@ -317,13 +318,16 @@ namespace FlatbufferHelper
         private T Track<T>(int size, Color col, Func<T> read)
         {
             long pos = BaseStream.Position;
-            if (true || !HasOverlap(_viewer.HighlightedRegions, pos, size)) //TODO: vtables get reused in vectors at least; also probably best to track seperates as a bitfield
+            if (!HasOverlap(_viewer.HighlightedRegions, pos, size)) //TODO: vtables get reused in vectors at least; also probably best to track seperates as a bitfield
             {
                 _viewer.HighlightedRegions.Add(new HexBox.HighlightedRegion((int)pos, size, col));
-                _viewer.HighlightedRegions.Sort((a,b) => a.Start.CompareTo(b.Start));
+                _viewer.HighlightedRegions.Sort((a, b) => a.Start.CompareTo(b.Start));
+                Progress.Instance.IncrementProgress(size);
             }
             else
-                Logger.Instance.Log(string.Format("Overlap read at 0x{0} [size=0x{1}]", pos.ToString("X"), size.ToString("X")));
+            {
+                //Logger.Instance.Log(LogLevel.WARN, $"Overlap read at 0x{pos.ToString("X")} [size=0x{size.ToString("X")}]");
+            }
 
             return read();
         }

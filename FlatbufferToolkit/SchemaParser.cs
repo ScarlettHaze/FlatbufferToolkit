@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using FlatbufferToolkit.UI;
+using FlatbufferToolkit.UI.IDE;
+using FlatbufferToolkit.Utils;
+using ScintillaNET;
 using System.Text;
 
-namespace FlatBuffersParser
+namespace FlatbufferToolkit
 {
     // ===== Type System =====
 
@@ -98,14 +98,14 @@ namespace FlatBuffersParser
     {
         private StreamReader _stream;
         private ulong _line = 1;
-        private List<string> _docComments = new();
 
         private Schema _schema = new();
         private string _currentNamespace = "";
 
-        public Schema? Parse(string fbsContent)
+        public Schema? Parse(Scintilla fbsContent)
         {
-            _stream = new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(fbsContent)));
+            Progress.Instance.Setup(fbsContent.Lines.Count, "Parsing schema");
+            _stream = new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(fbsContent.GetTextSafe())));
             _schema = new Schema();
 
             try
@@ -114,11 +114,12 @@ namespace FlatBuffersParser
                 {
                     ParseTopLevel();
                 }
+                Progress.Instance.SetProgress(fbsContent.Lines.Count, "Done");
                 return _schema;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Log(ex.Message);
+                Logger.Instance.Log(LogLevel.ERROR, ex.Message);
                 return null;
             }
         }
@@ -553,7 +554,7 @@ namespace FlatBuffersParser
         }
 
         private char Peek() => (char)_stream.Peek();
-        private void Next() { _stream.Read(); }
+        private void Next() { _stream.Read(); Progress.Instance.SetProgress((int)_line); }
         private bool IsEof() => _stream.EndOfStream;
     }
 }

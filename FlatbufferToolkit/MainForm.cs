@@ -1,15 +1,12 @@
 using Be.Windows.Forms;
-using FlatBuffersParser;
+using FlatbufferToolkit.UI;
 using FlatbufferToolkit.UI.HexView;
 using FlatbufferToolkit.UI.IDE;
+using FlatbufferToolkit.Utils;
 using ScintillaNET;
-using System.ComponentModel.Design;
 using System.Diagnostics;
-using System.IO;
-using System.Windows.Forms;
-using System.Xml.Linq;
 
-namespace FlatbufferHelper
+namespace FlatbufferToolkit
 {
     public partial class MainForm : Form
     {
@@ -21,6 +18,7 @@ namespace FlatbufferHelper
             InitializeComponent();
             InitDataInspector();
             InitIDE();
+            Progress.Initialize(ref progressBar1, ref progressLbl);
         }
 
         private void ClearForm()
@@ -94,10 +92,17 @@ namespace FlatbufferHelper
             dataInspRowLut["Double"].Cells[1].Value = BitConverter.ToDouble(val);
         }
 
-        private void ParseSchema()
+        private async void ParseSchema()
         {
+            schemaText.Enabled = false;
+            hexView.Enabled = false;
+
             var parser = new SchemaParser();
-            var schema = parser.Parse(schemaText.Text);
+            var schema = await Task.Run(() =>
+            {
+                return parser.Parse(schemaText);
+            });
+
             if (schema == null) return;
 
             Trace.WriteLine($"Parsed schema with {schema.Structs.Count} tables/structs");
@@ -113,7 +118,11 @@ namespace FlatbufferHelper
             }
 
             var binread = new FlatBufferBinWalk(ref hexView, ref treeView, fileBytes, schema);
-            var fbs = binread.ReadRoot();
+            var fbs = await Task.Run(() =>
+            {
+                return binread.ReadRoot();
+            });
+
             if (fbs == null) return;
 
             foreach (var root in fbs)
@@ -121,6 +130,8 @@ namespace FlatbufferHelper
                 Trace.WriteLine(root.ToString());
             }
             hexView.Invalidate(true);
+            schemaText.Enabled = true;
+            hexView.Enabled = true;
         }
 
         private void LoadFile(string filepath)
@@ -163,10 +174,7 @@ namespace FlatbufferHelper
 
         private void button1_Click(object sender, EventArgs e)
         {
-            treeView.Nodes.Clear();
-            hexView.HighlightedRegions.Clear();
-            outTxt.Text = string.Empty;
-            ParseSchema();
+            
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -198,6 +206,11 @@ namespace FlatbufferHelper
         private void schemaText_UpdateUI(object sender, UpdateUIEventArgs e)
         {
             textLbl.Text = string.Format("Text: Line {0}", schemaText.CurrentLine + 1);
+        }
+
+        private void runToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ParseSchema();
         }
     }
 }

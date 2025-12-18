@@ -1,4 +1,4 @@
-namespace FlatbufferHelper
+namespace FlatbufferToolkit
 {
     internal static class Program
     {

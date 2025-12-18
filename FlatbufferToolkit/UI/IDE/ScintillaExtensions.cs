@@ -98,5 +98,9 @@ namespace FlatbufferToolkit.UI.IDE
             scintilla.Margins[0].Width = show ? 25 : 0;
         }
 
+        public static string GetTextSafe(this Scintilla scintilla)
+        {
+            return scintilla.InvokeRequired ? scintilla.Invoke((() => scintilla.GetTextRange(0, scintilla.TextLength))) : scintilla.GetTextRange(0, scintilla.TextLength);
+        }
     }
 }
