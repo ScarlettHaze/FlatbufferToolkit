@@ -18,7 +18,7 @@ public partial class MainForm : Form
         InitializeComponent();
         InitDataInspector();
         InitIDE();
-        Progress.Initialize(ref progressBar1, ref progressLbl);
+        Progress.Initialize(progressBar1, progressLbl);
     }
 
     private void CreateTemplateSchema(string defaultName)
@@ -57,7 +57,7 @@ public partial class MainForm : Form
             }
         }
 
-        var binread = new FlatBufferBinWalk(ref hexView, ref treeView, fileBytes, schema);
+        var binread = new FlatBufferBinWalk(hexView, treeView, fileBytes, schema);
         var fbs = await Task.Run(() => binread.ReadRoot());
 
         if (fbs == null) goto end;

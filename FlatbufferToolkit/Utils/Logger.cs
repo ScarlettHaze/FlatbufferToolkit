@@ -19,7 +19,7 @@ public sealed class Logger
         _textBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
     }
 
-    public static void Initialize(ref RichTextBox textBox)
+    public static void Initialize(RichTextBox textBox)
     {
         lock (_lock)
         {

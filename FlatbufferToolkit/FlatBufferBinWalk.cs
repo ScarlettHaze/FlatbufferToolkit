@@ -13,7 +13,7 @@ public class FlatBufferBinWalk
     private readonly TreeView _treeView;
     private readonly int _bufferSize;
 
-    public FlatBufferBinWalk(ref HexBox viewer, ref TreeView treeView, byte[] buffer, Schema schema)
+    public FlatBufferBinWalk(HexBox viewer, TreeView treeView, byte[] buffer, Schema schema)
     {
         _reader = new BinaryReaderTracked(new MemoryStream(buffer), viewer);
         _schema = schema;
@@ -33,7 +33,7 @@ public class FlatBufferBinWalk
             var rootOffset = ReadIntAt(0);
 
             var rootNode = new TreeNode(_schema.RootType);
-            root = ReadTable(rootStruct, rootOffset, ref rootNode);
+            root = ReadTable(rootStruct, rootOffset, rootNode);
 
             _treeView.AddNodesToTree(rootNode);
 
@@ -48,7 +48,7 @@ public class FlatBufferBinWalk
         return root;
     }
 
-    private Dictionary<string, object> ReadTable(StructDef structDef, long offset, ref TreeNode thisNode)
+    private Dictionary<string, object> ReadTable(StructDef structDef, long offset, TreeNode thisNode)
     {
         var result = new Dictionary<string, object>();
 
@@ -74,10 +74,12 @@ public class FlatBufferBinWalk
                 continue;
             }
 
-            TreeNode elem = new TreeNode();
-            elem.ToolTipText = $"Addr: 0x{offset:X4}";
+            TreeNode elem = new TreeNode
+            {
+                ToolTipText = $"Addr: 0x{offset:X4}"
+            };
 
-            result[field.Name] = ReadFieldAt(field, offset + fieldOffset, ref elem);
+            result[field.Name] = ReadFieldAt(field, offset + fieldOffset, elem);
 
             thisNode.Nodes.Add(elem);
         }
@@ -85,7 +87,7 @@ public class FlatBufferBinWalk
         return result;
     }
 
-    private Dictionary<string, object> ReadStruct(StructDef structDef, long offset, ref TreeNode thisNode)
+    private Dictionary<string, object> ReadStruct(StructDef structDef, long offset, TreeNode thisNode)
     {
         var result = new Dictionary<string, object>();
             
@@ -95,10 +97,12 @@ public class FlatBufferBinWalk
             Seek(pos);
             if (field.Deprecated) continue;
 
-            TreeNode elem = new TreeNode();
-            elem.ToolTipText = $"Addr: 0x{pos:X4}";
-                
-            result[field.Name] = ReadFieldAt(field, pos, ref elem);
+            TreeNode elem = new TreeNode
+            {
+                ToolTipText = $"Addr: 0x{pos:X4}"
+            };
+
+            result[field.Name] = ReadFieldAt(field, pos, elem);
 
             thisNode.Nodes.Add(elem);
 
@@ -108,7 +112,7 @@ public class FlatBufferBinWalk
         return result;
     }
 
-    private object ReadFieldAt(FieldDef field, long pos, ref TreeNode node)
+    private object ReadFieldAt(FieldDef field, long pos, TreeNode node)
     {
         Seek(pos);
             
@@ -145,7 +149,7 @@ public class FlatBufferBinWalk
             case BaseType.Vector:
                 var typeName = field.Type.ElementType == BaseType.Obj ? field.Type.StructName : field.Type.ElementType.ToString();
                 node.Text = $"{field.Name}:Vector<{typeName}>";
-                val = ReadVectorAt(field, pos, ref node);
+                val = ReadVectorAt(field, pos, node);
                 break;
             case BaseType.Obj:
                 node.Text = field.Type.StructName;
@@ -155,9 +159,9 @@ public class FlatBufferBinWalk
                 if (structDef != null)
                 {
                     if (structDef.IsStruct)
-                        val = ReadStruct(structDef, pos, ref node);
+                        val = ReadStruct(structDef, pos, node);
                     else
-                        val = ReadTable(structDef, tableOffset, ref node);
+                        val = ReadTable(structDef, tableOffset, node);
                 }
 
                 break;
@@ -167,7 +171,7 @@ public class FlatBufferBinWalk
         return val;
     }
 
-    private object ReadVectorAt(FieldDef field, long pos, ref TreeNode thisNode)
+    private object ReadVectorAt(FieldDef field, long pos, TreeNode thisNode)
     {
         var vectorOffset = pos + ReadIntAt(pos);
         var length = ReadIntAt(vectorOffset);
@@ -180,8 +184,10 @@ public class FlatBufferBinWalk
         {
             var elemPos = dataOffset + i * elemSize;
 
-            var child = new TreeNode(field.Type.StructName);
-            child.ToolTipText = $"Addr: 0x{elemPos:X4}";
+            var child = new TreeNode(field.Type.StructName)
+            {
+                ToolTipText = $"Addr: 0x{elemPos:X4}"
+            };
             if (field.Type.ElementType == BaseType.Obj)
             {
                 var tableOffset = elemPos + ReadIntAt(elemPos);
@@ -190,9 +196,9 @@ public class FlatBufferBinWalk
                 if (structDef != null)
                 {
                     if (structDef.IsStruct)
-                        val = ReadStruct(structDef, elemPos, ref child);
+                        val = ReadStruct(structDef, elemPos, child);
                     else
-                        val = ReadTable(structDef, tableOffset, ref child);
+                        val = ReadTable(structDef, tableOffset, child);
                 }
                 ArgumentNullException.ThrowIfNull(val);
                 list.Add(val);
@@ -207,7 +213,7 @@ public class FlatBufferBinWalk
                         StructName = field.Type.StructName
                     }
                 };
-                list.Add(ReadFieldAt(elemField, elemPos, ref child));
+                list.Add(ReadFieldAt(elemField, elemPos, child));
             }
             thisNode.Nodes.Add(child);
         }

@@ -14,7 +14,7 @@ public sealed class Progress
         _progLbl = progLbl;
     }
 
-    public static void Initialize(ref ProgressBar progBar, ref Label progLbl)
+    public static void Initialize(ProgressBar progBar, Label progLbl)
     {
         lock (_lock)
         {
