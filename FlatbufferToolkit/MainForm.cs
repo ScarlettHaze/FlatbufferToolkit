@@ -122,6 +122,7 @@ namespace FlatbufferToolkit
                 d.Dispose();
             }
             hexView.ByteProvider = null;
+            hexView.HighlightedRegions.Clear();
         }
 
         private void UpdateDataInspectorSettings()
