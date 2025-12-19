@@ -1,7 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-
-namespace FlatbufferToolkit.Utils;
+﻿namespace FlatbufferToolkit.Utils;
 
 public enum LogLevel
 {

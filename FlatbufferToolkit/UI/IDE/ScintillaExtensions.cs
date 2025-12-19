@@ -1,5 +1,4 @@
 ﻿using ScintillaNET;
-using System.Drawing;
 
 namespace FlatbufferToolkit.UI.IDE;
 

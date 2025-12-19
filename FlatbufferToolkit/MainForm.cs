@@ -11,7 +11,7 @@ namespace FlatbufferToolkit;
 public partial class MainForm : Form
 {
     private byte[] fileBytes;
-    Dictionary<string, DataGridViewRow> dataInspRowLut = new Dictionary<string, DataGridViewRow>();
+    private Dictionary<string, DataGridViewRow> dataInspRowLut = new Dictionary<string, DataGridViewRow>();
 
     public MainForm()
     {
@@ -61,10 +61,7 @@ public partial class MainForm : Form
         }
 
         var binread = new FlatBufferBinWalk(ref hexView, ref treeView, fileBytes, schema);
-        var fbs = await Task.Run(() =>
-        {
-            return binread.ReadRoot();
-        });
+        var fbs = await Task.Run(() => binread.ReadRoot());
 
         if (fbs == null) goto end;
 

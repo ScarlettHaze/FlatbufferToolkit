@@ -2,8 +2,6 @@
 using FlatbufferToolkit.UI;
 using FlatbufferToolkit.UI.Nodes;
 using FlatbufferToolkit.Utils;
-using ScintillaNET;
-using System;
 using System.Text;
 
 namespace FlatbufferToolkit;
@@ -287,7 +285,7 @@ public class BinaryReaderTracked : BinaryReader
     public BinaryReaderTracked(Stream input, HexBox viewer)
         : base(input) => _viewer = viewer;
 
-    bool HasOverlap(List<HexBox.HighlightedRegion> regions, long offset, int length)
+    private bool HasOverlap(List<HexBox.HighlightedRegion> regions, long offset, int length)
     {
         long start = offset;
         long end = offset + length;
@@ -318,7 +316,7 @@ public class BinaryReaderTracked : BinaryReader
     private T Track<T>(int size, Color col, Func<T> read)
     {
         long pos = BaseStream.Position;
-        if (!HasOverlap(_viewer.HighlightedRegions, pos, size)) //TODO: vtables get reused in vectors at least; also probably best to track seperates as a bitfield
+        if (!HasOverlap(_viewer.HighlightedRegions, pos, size)) //TODO: vtables get reused in vectors at least; also probably best to track separates as a bitfield
         {
             _viewer.HighlightedRegions.Add(new HexBox.HighlightedRegion((int)pos, size, col));
             _viewer.HighlightedRegions.Sort((a, b) => a.Start.CompareTo(b.Start));
