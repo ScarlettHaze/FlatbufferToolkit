@@ -2,7 +2,7 @@
 Toolkit for rapid flatbuffer reverse engineering.
 
 # Screenshot
-![toolkit](https://i.imgur.com/sJLU2XW.png)
+![toolkit](https://i.imgur.com/Vy6O23v.png)
 
 # Requirements
-- .Net core 8.0
+- .Net 10.0
