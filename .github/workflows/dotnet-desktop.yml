@@ -1,18 +1,33 @@
-name: Build (Windows)
+name: Build / Package / Release (Windows)
 
 on:
   push:
     branches: ["**"]
+    tags:
+      - "v*.*.*"
   pull_request:
     branches: ["**"]
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
 
+    env:
+      CONFIGURATION: Release
+      SOLUTION: FlatbufferToolkit.slnx
+      PROJECT: FlatbufferToolkit/FlatbufferToolkit.csproj
+      RUNTIME: win-x64
+      # Set to "true" if you want a single self-contained exe (bigger output).
+      SELF_CONTAINED: "false"
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET 10 (preview)
         uses: actions/setup-dotnet@v4
@@ -20,15 +35,108 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: "preview"
 
-      - name: Display .NET info
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', '**/global.json', '**/NuGet.config') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: .NET info
         run: dotnet --info
 
       - name: Restore
-        run: dotnet restore FlatbufferToolkit.slnx
+        run: dotnet restore ${{ env.SOLUTION }}
 
-      - name: Build (Release)
-        run: dotnet build FlatbufferToolkit.slnx -c Release --no-restore
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} -c ${{ env.CONFIGURATION }} --no-restore
 
-      # Remove this step if you don't have tests
-      - name: Test
-        run: dotnet test FlatbufferToolkit.slnx -c Release --no-build
+      # Runs tests if any exist; otherwise it won't fail the workflow.
+      - name: Test (skip gracefully if none)
+        shell: pwsh
+        run: |
+          $tests = Get-ChildItem -Recurse -Filter *.csproj |
+            Where-Object { $_.FullName -match 'Test|Tests' }
+          if ($tests.Count -gt 0) {
+            dotnet test ${{ env.SOLUTION }} -c ${{ env.CONFIGURATION }} --no-build --verbosity normal
+          } else {
+            Write-Host "No test projects found (name contains Test/Tests). Skipping dotnet test."
+          }
+
+      - name: Determine version (from tag or commit)
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = "${{ github.ref }}"
+          if ($ref -like "refs/tags/*") {
+            $tag = $ref.Replace("refs/tags/","")
+            $version = $tag.TrimStart("v")
+          } else {
+            $sha = "${{ github.sha }}".Substring(0,7)
+            $version = "0.0.0-ci-$sha"
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "tag=$tag"       | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Publish (win-x64)
+        shell: pwsh
+        run: |
+          $out = Join-Path $PWD "artifacts\publish"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          $self = "${{ env.SELF_CONTAINED }}".ToLower()
+          if ($self -eq "true") {
+            dotnet publish ${{ env.PROJECT }} -c ${{ env.CONFIGURATION }} -r ${{ env.RUNTIME }} `
+              --self-contained true `
+              /p:PublishSingleFile=true `
+              /p:IncludeNativeLibrariesForSelfExtract=true `
+              /p:Version=${{ steps.ver.outputs.version }} `
+              -o $out
+          } else {
+            dotnet publish ${{ env.PROJECT }} -c ${{ env.CONFIGURATION }} -r ${{ env.RUNTIME }} `
+              --self-contained false `
+              /p:Version=${{ steps.ver.outputs.version }} `
+              -o $out
+          }
+
+      - name: Create ZIP artifact
+        id: zip
+        shell: pwsh
+        run: |
+          $name = "FlatbufferToolkit-${{ steps.ver.outputs.version }}-${{ env.RUNTIME }}"
+          $zipPath = Join-Path $PWD "artifacts\$name.zip"
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path "artifacts\publish\*" -DestinationPath $zipPath
+          "zip=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "name=$name"   | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload build artifact (ZIP)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.zip.outputs.name }}
+          path: ${{ steps.zip.outputs.zip }}
+          if-no-files-found: error
+
+  release:
+    # Only run on version tags like v1.2.3
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        shell: pwsh
+        run: Get-ChildItem -Recurse artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
